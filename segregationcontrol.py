@@ -6,8 +6,8 @@ from numpy.lib.scimath import sqrt
 
 from dubinrobot import DubinRobot
 from robotmemory import RobotMemory
-from dubinssegregation import movement_will, state
-from dubinssegregation.circlevectorfield import CircleVectorField
+from pydubinsseg import movement_will, state
+from pydubinsseg.circlevectorfield import CircleVectorField
 
 
 class SegregationControl():
@@ -103,16 +103,15 @@ class SegregationControl():
             j_wants_outward = j_data['will'] == movement_will['outward']
             j_arrived_first = j_data['time_curve'] < i_data['time_curve']
             j_tiebreaker = (j_data['time_curve'] == i_data['time_curve']) and (j_data['pose2D'][2] < i_data['pose2D'][2])
+            j_group_is_alone = True
             for k_data in self.__memory.get_memory_about_others():
                 if k_data['number'] == j_data['number']:
                     continue
-                j_group_is_alone = True
                 k_is_same_group_j = k_data['group'] == j_data['group']
                 k_is_same_curve_j = k_data['curve_index'] == j_data['curve_index']
                 if k_is_same_curve_j and not k_is_same_group_j:
                     j_group_is_alone = False
                     break
-
             if j_is_immediate_inward and not j_is_same_group:
                 self.__set_lap(False)
             if j_is_same_group and j_group_is_alone and j_is_inward:
