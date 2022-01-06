@@ -71,7 +71,10 @@ class SegregationControl():
         }
         self.__memory.update_memory_about_itself(data)
 
-    def recieve_j_memory(self, other_memory):
+    def send_memory(self):
+        return self.__memory.get_memory()
+
+    def recieve_memory(self, other_memory):
         self.__memory.compare_and_update(other_memory)
 
     def calculate_lap(self):

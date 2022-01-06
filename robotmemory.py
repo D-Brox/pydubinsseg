@@ -73,8 +73,6 @@ class RobotMemory():
             new_item.update(j_data)
             self.__data.append(new_item)
 
-    def compare_and_update(self, other_memory):
-        for item in other_memory.get_memory():
+    def compare_and_update(self, other_memory_data):
+        for item in other_memory_data:
             self.check_and_update_memory_about_j(item)
-
-
