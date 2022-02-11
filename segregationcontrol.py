@@ -4,10 +4,10 @@ import numpy as np
 
 from numpy.lib.scimath import sqrt
 
-from dubinrobot import DubinRobot
-from robotmemory import RobotMemory
-from pydubinsseg import movement_will, state
+from pydubinsseg.dubinrobot import DubinRobot
+from pydubinsseg.robotmemory import RobotMemory
 from pydubinsseg.circlevectorfield import CircleVectorField
+from pydubinsseg import movement_will, state
 
 
 class SegregationControl():
@@ -46,6 +46,9 @@ class SegregationControl():
 
     def get_state(self):
         return self.__state
+
+    def get_group(self):
+        return self.__group
         
     def set_state(self, state):
         self.__state = state
