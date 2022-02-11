@@ -56,6 +56,9 @@ class SegregationControl():
     def set_pose2D(self, pose2D):
         self.__robot.set_pose2D(pose2D)
 
+    def get_pose2D(self):
+        return self.__robot.get_pose2D()
+
     def set_params(self, params):
         self.__params = params
         if 'ref_vel' in self.__params:
