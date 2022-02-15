@@ -41,10 +41,13 @@ class CircleVectorField():
         F = -eta*G*D/(np.linalg.norm(D)+1e-6) + eta*H*T/(np.linalg.norm(T)+1e-6)
         return F,D,T,G,H
 
-    def redefine(self, r, cx, cy, dir = 1, kG = 8.0, vr = 1.0):
+    def redefine(self, r, cx, cy, dir = None, kG = None, vr = None):
         self.__r = lambda s: np.array([r*cos(s)+cx, r*sin(s)+cy])
         self.__drds = lambda s: np.array([-r*sin(s), r*cos(s)])
-        self.__direction = dir/abs(dir)
-        self.__kG = kG
-        self.__vr = vr
+        if dir is not None:
+            self.__direction = dir/abs(dir)
+        if kG is not None:
+            self.__kG = kG
+        if vr is not None:
+            self.__vr = vr
         self.__norm_D_function = lambda p,s: np.linalg.norm( p - self.__r(s) )
