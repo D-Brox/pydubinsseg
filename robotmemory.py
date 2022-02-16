@@ -61,14 +61,13 @@ class RobotMemory():
 
     def check_and_update_memory_about_j(self, j_data):
         j_in_data = False
-        for memory_idx in range(len(self.__data)):
-            if memory_idx == 0:
-                continue
+        i_data = self.__data[0].get()
+        for memory_idx in range(1,len(self.__data)):
             if self.__data[memory_idx].get()['number'] == j_data['number']:
                 j_in_data = True
                 if self.__data[memory_idx].get()['time'] < j_data['time']:
                     self.__data[memory_idx].update(j_data)
-        if not j_in_data:
+        if not j_in_data and j_data['number'] != i_data['number']:
             new_item = MemoryItem()
             new_item.update(j_data)
             self.__data.append(new_item)

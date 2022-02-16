@@ -28,6 +28,8 @@ class SegregationControl():
         self.__closest_circle = 0
         self.__vector_field = CircleVectorField(1,0,0)
 
+        self.update_memory_about_itself()
+
         # self.mov_radius = 1
         # self.curve_vector_field = VectorField()
         # self.transition_vector_field = VectorField()
@@ -69,6 +71,8 @@ class SegregationControl():
 
     def update_memory_about_itself(self):
         data = {
+            'group': self.__group,
+            'number': self.__number,
             'curve_index': self.__closest_circle,
             'time_curve': self.__time_curve,
             'time': self.__time,
@@ -149,8 +153,9 @@ class SegregationControl():
             r = self.__params['d']/2
             cx = p[0]*(1 + self.__params['d']/(2*sqrt(p[0]**2 + p[1]**2)))
             cy = p[1]*(1 + self.__params['d']/(2*sqrt(p[0]**2 + p[1]**2)))
-            self.__vector_field.redefine(r, cx, cy)
             self.__closest_circle = self.__closest_circle + 1
+            dir = ((-1)**(self.__closest_circle))
+            self.__vector_field.redefine(r, cx, cy, dir = dir)
         elif self.__will == movement_will['inward']:
             self.set_state(state['transition'])
             self.__set_lap(False)
@@ -158,8 +163,8 @@ class SegregationControl():
             r = self.__params['d']/2
             cx = p[0]*(1 - self.__params['d']/(2*sqrt(p[0]**2 + p[1]**2)))
             cy = p[1]*(1 - self.__params['d']/(2*sqrt(p[0]**2 + p[1]**2)))
-            self.__vector_field.redefine(r, cx, cy)
             self.__closest_circle = max(self.__closest_circle - 1, 1)
+            self.__vector_field.redefine(r, cx, cy)
 
     def calculate_input_signals(self):
         [F,D,T,G,H] = self.__vector_field.compute_field(self.__robot.get_pose2D())
