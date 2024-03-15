@@ -39,7 +39,7 @@ class DubinRobot():
     #         xo = self.x + dist*cos(self.theta + angle)
     #         yo = self.y + dist*sin(self.theta + angle)
     #         obstacles_position.append( (xo,yo) )
-    #         # msg = 'Robot ' + str(self.get_number()) + ',' + str(self.group) + ' Measurement: ' + str( [(dist,angle),(xo,yo),(self.x, self.y, self.theta)] ) 
+    #         # msg = f"Robot {self.get_number()},{self.group} Measurement: {[(dist,angle),(xo,yo),(self.x, self.y, self.theta)]}"
     #         # rospy.loginfo(msg)
     #     return obstacles_position
 
