@@ -109,7 +109,7 @@ class SegregationControl():
     #HACK: think of a better way to do this
     def calculate_lap(self):
         error_limit = 0.01
-        time_per_curve = 60 # wishful thinking
+        time_per_curve = 60 # wishful thinking, depending on the PC
         theta_diff = abs(self.__theta_curve - self.__robot.get_pose2D()[2])
         condition_theta = theta_diff <= error_limit or theta_diff >= 2*pi-error_limit
         condition_time = self.__time - self.__time_curve > time_per_curve*self.__current_circle
@@ -124,7 +124,7 @@ class SegregationControl():
     def calculate_wills(self):
         if not len(self.__memory.get_memory_about_others()) and not self.__lap:
             # print(len(self.__memory.get_memory_about_others()))
-            return
+            return False,False
         i_data = self.__memory.get_memory_about_itself()
 
         inward = False
@@ -135,7 +135,7 @@ class SegregationControl():
 
         for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"]):
             #A1: l13-l15
-            if j_data['group'] != i_data['group'] and j_data['curve_index'] == (i_data['curve_index'] - 1):
+            if j_data['group'] != i_data['group'] and j_data['curve_index'] == i_data['curve_index'] - 1:
                 self.__set_lap(False)
 
         for k_data in self.__memory.get_memory_about_others():
@@ -144,9 +144,9 @@ class SegregationControl():
             if k_data['group'] != i_data['group']:
                 if k_data['curve_index'] == i_data['curve_index']:
                     k_other_group_same_circle.append(k_data)
-            elif k_data["state"] and  k_data['curve_index'] < i_data['curve_index']:
+            elif k_data['curve_index'] < i_data['curve_index']:
                     k_data_same_group_inside.append(k_data)
-            if k_data["state"] and k_data['will'] == movement_will['outward'] and k_data['curve_index'] == (i_data['curve_index'] - 1):
+            if k_data['will'] == movement_will['outward'] and k_data['curve_index'] == (i_data['curve_index'] - 1):
                 #A1: l21-l22
                 # print(self.__number,"at",self.__current_circle,"make room for",k_data["number"])
                 outward = True
@@ -176,7 +176,8 @@ class SegregationControl():
         if k_other_group_same_circle and not inward:
             outward  = False
             for k_data in k_other_group_same_circle:
-                if k_data["state"] and (k_data['time_curve'] < i_data['time_curve'] or (k_data['time_curve'] == i_data['time_curve'] and (k_data['pose2D'][2] < i_data['pose2D'][2]))):
+                # print(i_data["curve_index"],i_data['time_curve'],k_data['time_curve'])
+                if k_data["state"] and (i_data['time_curve'] > k_data['time_curve'] or (i_data['time_curve'] == k_data['time_curve'] and (i_data['pose2D'][2] > k_data['pose2D'][2]))):
                     outward |= True
                     # print(self.__number,"at",self.__current_circle,"other same", "lose to", k_data['number'],outward)
                     break
@@ -195,30 +196,9 @@ class SegregationControl():
         else:
             self.__will = movement_will['none']
 
-        if inward or outward:
-            self.prevent_collision(self.__memory.get_memory_about_itself(),outward,inward)
+        return inward,outward
 
-    # def check_tunnel(self, i_data, targ):
-    #     curr = i_data['curve_index']
-
-    #     d = (targ-0.5)*self.__params['d']
-    #     r1 = targ*self.__params['d'] -  self.__params['Rb']
-    #     r2 = self.__params['d']/2
-    #     l = (r2**2 - r1**2 + d**2)/(2*d)
-    #     Sr = (pi-np.arccos(l/r2))*r2
-
-    #     Ti_Pgoal = pi*r2
-    #     Ti_Pi = pi*r2 - 2*np.arccos(self.__params['Rb']/r2)*r2
-
-    #     d = (targ+curr)/2*self.__params['d']
-    #     r1 = targ*self.__params['d']
-    #     r2 = self.__params['d']/2 + self.__params['Rb']
-    #     l = (r1**2 - r2**2 + d**2)/(2*d)
-    #     T_Pgoal_Pj = (np.arccos(l/r1))*r1
-
-    #     return Sr,Ti_Pgoal,Ti_Pi,T_Pgoal_Pj
-
-    def check_tunnel(self, i_data, targ):
+    def tunnel_angles(self, i_data, targ):
         curr = i_data['curve_index']
 
         d = (targ-0.5)*self.__params['d']
@@ -241,14 +221,18 @@ class SegregationControl():
         # print(ang_Pi*180/pi,ang_Pj*180/pi,ang_dpi*180/pi)
         return ang_Sr,ang_Pi+ang_dpi,ang_Pj+ang_dpi
 
-    def prevent_collision(self,i_data,outward,inward,in_a_curve_epsilon_percentage = 0.1):
+    def prevent_collision(self,inward,outward):
+        i_data = self.__memory.get_memory_about_itself()
         tunnel_in = []
         tunnel_out = []
         preferencial = True
         # print(i_data["number"],i_data["curve_index"],"try","inward" if inward else "","outward" if outward else "")
 
+        # print(0 if outward and inward else (-1 if inward else 1),i_data["curve_index"],[j_data["curve_index"] for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"])])
+
         for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"]):
             if not j_data['state']:
+                # print(i_data['curve_index'],"cancel state",j_data["curve_index"])
                 if outward:
                     self.__will = movement_will['outward']
                     return
@@ -258,21 +242,22 @@ class SegregationControl():
 
             #A2: l3-l5
             if inward:
-                if j_data["state"] and i_data['curve_index'] == j_data['curve_index'] + 1:
+                if j_data["state"] and i_data['curve_index'] - 1 == j_data['curve_index']:
                     tunnel_in.append(j_data)
 
             #A2: l6-l8
             if outward:
-                if j_data["state"] and i_data['curve_index'] == j_data['curve_index'] - 1:
+                if j_data["state"] and i_data['curve_index'] + 1 == j_data['curve_index']:
                     tunnel_out.append(j_data)
 
             if j_data['state'] and j_data['will'] != movement_will['none'] and ang(j_data['pose2D']) <= ang(i_data['pose2D']):
                 # print("\t",i_data["number"],"not preferencial", j_data["number"] , "is first")
                 preferencial = False
+                # print(i_data['curve_index'],"cancel pref")
 
         if inward:
-            targ = i_data['curve_index']-1
-            ang_Sr,ang_Pi_dpi, ang_Pj_dpi = self.check_tunnel(i_data,targ)
+            targ = i_data['curve_index'] - 1
+            ang_Sr,ang_Pi_dpi, ang_Pj_dpi = self.tunnel_angles(i_data,targ)
             for j_data in tunnel_in:
                 if j_data["group"] == i_data["group"]:
                     ang_Sr_l=2*ang_Sr
@@ -284,12 +269,14 @@ class SegregationControl():
                 ang_diff = math.remainder(targ_diff(i_data['pose2D'],j_data['pose2D'],targ),2*pi)
                 # print(ang(i_data["pose2D"])*180/pi,i_data["curve_index"],ang(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
+                # print(i_data["curve_index"],"inward",ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
                 if -ang_before < ang_diff < ang_after:
                     inward = False
+                    # print(i_data['curve_index'],"cancel in dist")
                     break
         if outward:
-            targ = i_data['curve_index']-1
-            ang_Sr,ang_Pi_dpi, ang_Pj_dpi = self.check_tunnel(i_data,targ)
+            targ = i_data['curve_index'] + 1
+            ang_Sr,ang_Pi_dpi, ang_Pj_dpi = self.tunnel_angles(i_data,targ)
             for j_data in tunnel_out:
                 if j_data["group"] == i_data["group"]:
                     ang_Sr_l=2*ang_Sr
@@ -301,34 +288,37 @@ class SegregationControl():
                 ang_diff = math.remainder(targ_diff(i_data['pose2D'],j_data['pose2D'],targ),2*pi)
                 # print(ang(i_data["pose2D"])*180/pi,i_data["curve_index"],ang(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
+                # print(i_data["curve_index"],"outward", -ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
                 if -ang_before < ang_diff < ang_after:
                     outward = False
+                    # print(i_data['curve_index'],"cancel out dist")
                     break
 
-        if outward and preferencial:
+        if outward:
             # print("\t\t",i_data["number"],i_data["curve_index"],"outward")
 
             self.__will = movement_will['outward']
-            self.evaluate_will_field()
-        elif inward and preferencial:
+            if preferencial:
+                self.evaluate_will_field()
+        elif inward:
             self.__will = movement_will['inward']
             # print("\t\t",i_data["number"],i_data["curve_index"],"inward")
-            self.evaluate_will_field()
+            if preferencial:
+                self.evaluate_will_field()
         else:
             self.__will = movement_will['none']
 
     def evaluate_will_field(self):
-        if self.__will != movement_will['none'] and self.get_state() == state['in circle']:
-            self.set_state(state['transition'])
-            self.__set_lap(False)
-            p = self.__robot.get_pose2D()
-            r = self.__params['d']/2
-            sig = 1 if self.__will == movement_will['outward'] else -1
-            cx = p[0]*(sqrt(p[0]**2 + p[1]**2)+sig*r)/sqrt(p[0]**2 + p[1]**2)
-            cy = p[1]*(sqrt(p[0]**2 + p[1]**2)+sig*r)/sqrt(p[0]**2 + p[1]**2)
-            self.__desired_circle = max(self.__current_circle+sig,1)
-            dir = ((-1)**(self.__desired_circle)) if sig == 1 else None
-            self.__vector_field.redefine(r, cx, cy, dir = dir)
+        self.set_state(state['transition'])
+        self.__set_lap(False)
+        p = self.__robot.get_pose2D()
+        r = self.__params['d']/2
+        sig = 1 if self.__will == movement_will['outward'] else -1
+        cx = p[0]*(sqrt(p[0]**2 + p[1]**2)+sig*r)/sqrt(p[0]**2 + p[1]**2)
+        cy = p[1]*(sqrt(p[0]**2 + p[1]**2)+sig*r)/sqrt(p[0]**2 + p[1]**2)
+        self.__desired_circle = max(self.__current_circle+sig,1)
+        dir = ((-1)**(self.__desired_circle)) if sig == 1 else None
+        self.__vector_field.redefine(r, cx, cy, dir = dir)
 
     def calculate_input_signals(self):
         [F,D,T,G,H] = self.__vector_field.compute_field(self.__robot.get_pose2D())
