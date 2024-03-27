@@ -47,7 +47,6 @@ class MemoryItem():
 class RobotMemory():
     def __init__(self):
         self.__data = [MemoryItem()]
-        self.__in_range = set()
 
     def reset(self):
         self.__data = [self.__data[0]]
@@ -61,14 +60,19 @@ class RobotMemory():
     def get_memory_about_others(self):
         return [other.get() for other in self.__data[1:]]
 
-    def get_recent_memory_about_others(self):
+    def get_memory_about_neighbours(self,c):
         others = [other.get() for other in self.__data[1:]]
-        return [other for other in others if other["number"] in self.__in_range]
+        itself = self.__data[0].get()
+        dist = lambda a,b: (a[0] - b[0])**2 + (a[1] - b[0])**2
+        in_range = [ dist(itself["pose2D"],other["pose2D"]) < c**2 for other in others]
+        return [other for other,d in zip(others,in_range) if d]
 
     def get_memory(self):
         return [self.get_memory_about_itself()] + self.get_memory_about_others()
 
     def check_and_update_memory_about_j(self, j_data):
+        if not j_data['curve_index']:
+            return
         j_in_data = False
         i_data = self.__data[0].get()
         for memory_idx in range(1,len(self.__data)):
@@ -82,8 +86,7 @@ class RobotMemory():
             self.__data.append(new_item)
 
     def compare_and_update(self, other_memory_data):
-        self.__in_range = set()
         for item in other_memory_data:
             self.check_and_update_memory_about_j(item)
-            self.__in_range.add(item['number'])
+
 
