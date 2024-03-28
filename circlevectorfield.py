@@ -1,53 +1,47 @@
 #!/usr/bin/env python
 
-from math import atan, cos,sin,sqrt,pi
-
 import numpy as np
+from numpy import cos,sin,pi
 
-
-def golden_section_search(f, a, b, tol=1e-5):
-    gr = (sqrt(5)+1)/2
-    c = b - (b - a) / gr
-    d = a + (b - a) / gr
-    while abs(b-a) > tol:
-        if f(c) < f(d):
-            b = d
-        else:
-            a = c
-        c = b - (b - a) / gr
-        d = a + (b - a) / gr
-    return (b+a)/2
-
+from pydubinsseg.vector_utils import ang_vec, vec_norm, ortogonal_vec
 
 class CircleVectorField():
 
-    def __init__(self, r, cx, cy, dir = 1.0, kG = 8.0, vr = 1.0):
+    def __init__(self, r, cx, cy, dir = 1.0, vr = 1.0):
+        self.__c_r = [np.array([cx,cy]),r]
         self.__r = lambda s: np.array([r*cos(s)+cx, r*sin(s)+cy])
-        self.__drds = lambda s: np.array([-r*sin(s), r*cos(s)])
         self.__direction = dir/abs(dir)
-        self.__kG = kG
         self.__vr = vr
-        self.__norm_D_function = lambda p,s: np.linalg.norm( p - self.__r(s) )
 
     def compute_field(self,pose2D):
         p = np.array([pose2D[0], pose2D[1]])
         eta = self.__vr
-        s_star = golden_section_search(lambda s: self.__norm_D_function(p,s), -pi, pi)
+
+        p_c = p-self.__c_r[0]
+        s_star = ang_vec(p_c)
         r_star = self.__r(s_star)
-        D = p - r_star
-        T = self.__direction*self.__drds(s_star)
-        G = (2/pi) * atan(self.__kG*np.linalg.norm(D))
-        H = sqrt( max(1 - G**2,0) )
-        F = -eta*G*D/(np.linalg.norm(D)+1e-6) + eta*H*T/(np.linalg.norm(T)+1e-6)
+
+        D, dnorm = vec_norm(p,r_star)
+        if dnorm != 0:
+            N, norm = vec_norm(D,0.1*D/dnorm)
+            if norm == 0:
+                norm = 1e-3
+            T = self.__direction*ortogonal_vec(p_c)/np.dot(p_c,p_c)
+            G = - norm/np.sqrt(1 + norm**2)
+            H = 1/np.sqrt(1+norm**2)
+        else:
+            N = D
+            T = self.__direction*ortogonal_vec(p_c)/np.dot(p_c,p_c)
+            G = 0
+            H = 1
+
+        F =  eta*(G*N+H*T)
         return F,D,T,G,H
 
     def redefine(self, r, cx, cy, dir = None, kG = None, vr = None):
+        self.__c_r = [np.array([cx,cy]),r]
         self.__r = lambda s: np.array([r*cos(s)+cx, r*sin(s)+cy])
-        self.__drds = lambda s: np.array([-r*sin(s), r*cos(s)])
         if dir is not None:
             self.__direction = dir/abs(dir)
-        if kG is not None:
-            self.__kG = kG
         if vr is not None:
             self.__vr = vr
-        self.__norm_D_function = lambda p,s: np.linalg.norm( p - self.__r(s) )

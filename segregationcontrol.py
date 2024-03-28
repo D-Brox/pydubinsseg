@@ -1,29 +1,14 @@
 #!/usr/bin/env python
-from math import pi
 import math
 import numpy as np
-
+from numpy import pi
 from numpy.lib.scimath import sqrt
 
 from pydubinsseg.dubinrobot import DubinRobot
 from pydubinsseg.robotmemory import RobotMemory
 from pydubinsseg.circlevectorfield import CircleVectorField
+from pydubinsseg.vector_utils import ang_vec,ang_diff,targ_diff
 from pydubinsseg import movement_will, state
-
-def ang(p):
-    return np.arctan2(p[1],p[0])
-
-def targ_diff(pa,pb,targ):
-    a = ang(pa)
-    b = ang(pb)
-    diff =  (2*pi - (b-a)%(2*pi)) if targ % 2 else (b-a)%(2*pi)
-    # print(targ,pa,pb, a*180/pi,b*180/pi,diff*180/pi)
-    return diff
-
-def ang_diff(pa,pb):
-    a = ang(pa)
-    b = ang(pb)
-    return min(2*pi - (b-a)%(2*pi), (b-a)%(2*pi))
 
 class SegregationControl():
 
@@ -38,6 +23,7 @@ class SegregationControl():
         self.__memory = RobotMemory()
 
         self.__time = 0
+        self.__start_time = 10
         self.__time_curve = 0
         self.__theta_curve = 0
         self.__desired_circle = 0
@@ -68,7 +54,7 @@ class SegregationControl():
 
     def get_group(self):
         return self.__group
-        
+
     def set_state(self, state):
         self.__state = state
 
@@ -121,8 +107,8 @@ class SegregationControl():
         self.__time_curve = self.__time
         self.__theta_curve = self.__robot.get_pose2D()[2]
 
-    def calculate_wills(self):
-        if not len(self.__memory.get_memory_about_others()) and not self.__lap:
+    def calculate_will(self):
+        if self.__time < self.__start_time or not (len(self.__memory.get_memory_about_others()) or self.__lap):
             # print(len(self.__memory.get_memory_about_others()))
             return False,False
         i_data = self.__memory.get_memory_about_itself()
@@ -233,12 +219,7 @@ class SegregationControl():
         for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"]):
             if not j_data['state']:
                 # print(i_data['curve_index'],"cancel state",j_data["curve_index"])
-                if outward:
-                    self.__will = movement_will['outward']
-                    return
-                if inward:
-                    self.__will = movement_will['inward']
-                    return
+                return
 
             #A2: l3-l5
             if inward:
@@ -250,7 +231,7 @@ class SegregationControl():
                 if j_data["state"] and i_data['curve_index'] + 1 == j_data['curve_index']:
                     tunnel_out.append(j_data)
 
-            if j_data['state'] and j_data['will'] != movement_will['none'] and ang(j_data['pose2D']) <= ang(i_data['pose2D']):
+            if j_data['state'] and j_data['will'] != movement_will['none'] and ang_vec(j_data['pose2D']) <= ang_vec(i_data['pose2D']):
                 # print("\t",i_data["number"],"not preferencial", j_data["number"] , "is first")
                 preferencial = False
                 # print(i_data['curve_index'],"cancel pref")
@@ -267,7 +248,7 @@ class SegregationControl():
                 ang_before = ang_Pi_dpi + ang_Sr_l
                 ang_after = ang_Pj_dpi + ang_Sr_l
                 ang_diff = math.remainder(targ_diff(i_data['pose2D'],j_data['pose2D'],targ),2*pi)
-                # print(ang(i_data["pose2D"])*180/pi,i_data["curve_index"],ang(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
+                # print(ang_vec(i_data["pose2D"])*180/pi,i_data["curve_index"],ang_vec(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
                 # print(i_data["curve_index"],"inward",ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
                 if -ang_before < ang_diff < ang_after:
@@ -286,7 +267,7 @@ class SegregationControl():
                 ang_before = ang_Pi_dpi + ang_Sr_l
                 ang_after = ang_Pj_dpi + ang_Sr_l
                 ang_diff = math.remainder(targ_diff(i_data['pose2D'],j_data['pose2D'],targ),2*pi)
-                # print(ang(i_data["pose2D"])*180/pi,i_data["curve_index"],ang(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
+                # print(ang_vec(i_data["pose2D"])*180/pi,i_data["curve_index"],ang_vec(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
                 # print(i_data["curve_index"],"outward", -ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
                 if -ang_before < ang_diff < ang_after:
