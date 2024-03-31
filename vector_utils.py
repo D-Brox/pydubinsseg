@@ -8,7 +8,11 @@ def ang_vec(p):
 def targ_diff(pa,pb,targ):
     a = ang_vec(pa)
     b = ang_vec(pb)
-    diff =  (2*pi - (b-a)%(2*pi)) if targ % 2 else (b-a)%(2*pi)
+    diff =  (b-a)%(2*pi) if targ % 2 else (a-b)%(2*pi)
+    if diff > pi:
+        diff -= pi
+    if diff < -pi:
+        diff += pi
     return diff
 
 def ang_diff(a,b):

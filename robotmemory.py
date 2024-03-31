@@ -30,8 +30,8 @@ class MemoryItem():
         if "state" in update_data:
             self.__state = update_data["state"]
 
-    def get(self):
-        return {
+    def get(self,attr = None):
+        memory = {
             "group": self.__group,
             "number": self.__number,
             "curve": self.__curve,
@@ -41,7 +41,7 @@ class MemoryItem():
             "will": self.__will,
             "state": self.__state
         }
-
+        return memory[attr] if attr in memory else memory
 
 class RobotMemory():
     def __init__(self):
@@ -49,6 +49,14 @@ class RobotMemory():
 
     def reset(self):
         self.__data = [self.__data[0]]
+
+    def neighbors(self,c,d):
+        data_itself = self.__data[0]
+        pose = data_itself.get("pose2D")
+        dist = lambda d: (pose[0] - d[0])**2 + (pose[1] - d[0])**2 < c**2
+        time = lambda t: t + 120 * data_itself.get("curve") >= data_itself.get("time")
+        neighbors = [other for other in self.__data[1:] if dist(other.get("pose2D")) and time(other.get("time"))]
+        self.__data = [self.__data[0]] + neighbors
 
     def update_memory_about_itself(self, i_data):
         self.__data[0].update(i_data)
@@ -61,10 +69,9 @@ class RobotMemory():
 
     def get_memory_about_neighbours(self,c):
         others = [other.get() for other in self.__data[1:]]
-        itself = self.__data[0].get()
-        dist = lambda a,b: (a[0] - b[0])**2 + (a[1] - b[0])**2
-        in_range = [ dist(itself["pose2D"],other["pose2D"]) < c**2 for other in others]
-        return [other for other,d in zip(others,in_range) if d]
+        pose = self.__data[0].get("pose2D")
+        dist = lambda d: (pose[0] - d[0])**2 + (pose[1] - d[0])**2 < c**2
+        return [other for other in others if dist(other["pose2D"])]
 
     def get_memory(self):
         return [self.get_memory_about_itself()] + self.get_memory_about_others()
@@ -75,9 +82,9 @@ class RobotMemory():
         j_in_data = False
         i_data = self.__data[0].get()
         for memory_idx in range(1,len(self.__data)):
-            if self.__data[memory_idx].get()["number"] == j_data["number"]:
+            if self.__data[memory_idx].get("number") == j_data["number"]:
                 j_in_data = True
-                if self.__data[memory_idx].get()["time"] < j_data["time"]:
+                if self.__data[memory_idx].get("time") < j_data["time"]:
                     self.__data[memory_idx].update(j_data)
         if not j_in_data and j_data["number"] != i_data["number"]:
             new_item = MemoryItem()
