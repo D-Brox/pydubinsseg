@@ -5,7 +5,7 @@ class MemoryItem():
     def __init__(self):
         self.__group = 0
         self.__number = 0
-        self.__curve_index = 0
+        self.__curve = 0
         self.__time_curve = 0
         self.__time = 0
         self.__pose2D = [0,0,0]
@@ -17,8 +17,8 @@ class MemoryItem():
             self.__group = update_data["group"]
         if "number" in update_data:
             self.__number = update_data["number"]
-        if "curve_index" in update_data:
-            self.__curve_index = update_data["curve_index"]
+        if "curve" in update_data:
+            self.__curve = update_data["curve"]
         if "time_curve" in update_data:
             self.__time_curve = update_data["time_curve"]
         if "time" in update_data:
@@ -34,7 +34,7 @@ class MemoryItem():
         return {
             "group": self.__group,
             "number": self.__number,
-            "curve_index": self.__curve_index,
+            "curve": self.__curve,
             "time_curve": self.__time_curve,
             "time": self.__time,
             "pose2D": self.__pose2D,
@@ -70,7 +70,7 @@ class RobotMemory():
         return [self.get_memory_about_itself()] + self.get_memory_about_others()
 
     def check_and_update_memory_about_j(self, j_data):
-        if not j_data["curve_index"]:
+        if not j_data["curve"]:
             return
         j_in_data = False
         i_data = self.__data[0].get()

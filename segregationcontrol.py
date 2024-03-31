@@ -76,7 +76,7 @@ class SegregationControl():
         data = {
             "group": self.__group,
             "number": self.__number,
-            "curve_index": self.__current_circle,
+            "curve": self.__current_circle,
             "time_curve": self.__time_curve,
             "time": self.__time,
             "pose2D": self.__robot.get_pose2D(),
@@ -121,18 +121,18 @@ class SegregationControl():
 
         for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"]):
             #A1: l13-l15
-            if j_data["group"] != i_data["group"] and j_data["curve_index"] == i_data["curve_index"] - 1:
+            if j_data["group"] != i_data["group"] and j_data["curve"] == i_data["curve"] - 1:
                 self.__set_lap(False)
 
         for k_data in self.__memory.get_memory_about_others():
             # if not k_data["state"]:
                 # continue
             if k_data["group"] != i_data["group"]:
-                if k_data["curve_index"] == i_data["curve_index"]:
+                if k_data["curve"] == i_data["curve"]:
                     k_other_group_same_circle.append(k_data)
-            elif k_data["curve_index"] < i_data["curve_index"]:
+            elif k_data["curve"] < i_data["curve"]:
                     k_data_same_group_inside.append(k_data)
-            if k_data["will"] == movement_will["outward"] and k_data["curve_index"] == (i_data["curve_index"] - 1):
+            if k_data["will"] == movement_will["outward"] and k_data["curve"] == (i_data["curve"] - 1):
                 #A1: l21-l22
                 # print(self.__number,"at",self.__current_circle,"make room for",k_data["number"])
                 outward = True
@@ -144,7 +144,7 @@ class SegregationControl():
                 for l_data in self.__memory.get_memory_about_others():
                     if not l_data["state"]:
                         continue
-                    if k_data["curve_index"] != l_data["curve_index"]:
+                    if k_data["curve"] != l_data["curve"]:
                         continue
                     if k_data["group"] == l_data["group"]:
                         continue
@@ -162,7 +162,7 @@ class SegregationControl():
         if k_other_group_same_circle and not inward:
             outward  = False
             for k_data in k_other_group_same_circle:
-                # print(i_data["curve_index"],i_data["time_curve"],k_data["time_curve"])
+                # print(i_data["curve"],i_data["time_curve"],k_data["time_curve"])
                 if k_data["state"] and (i_data["time_curve"] > k_data["time_curve"] or (i_data["time_curve"] == k_data["time_curve"] and (i_data["pose2D"][2] > k_data["pose2D"][2]))):
                     outward |= True
                     # print(self.__number,"at",self.__current_circle,"other same", "lose to", k_data["number"],outward)
@@ -171,7 +171,7 @@ class SegregationControl():
                     # print(self.__number,"at",self.__current_circle,"other same", "win")
 
         #A1: l23-l24
-        if self.__lap and i_data["curve_index"] > 1:
+        if self.__lap and i_data["curve"] > 1:
             inward = True
             print(self.__number,"at",self.__current_circle,"lap and space")
 
@@ -185,7 +185,7 @@ class SegregationControl():
         return inward,outward
 
     def tunnel_angles(self, i_data, targ):
-        curr = i_data["curve_index"]
+        curr = i_data["curve"]
 
         d = (targ-0.5)*self.__params["d"]
         r1 = targ*self.__params["d"] -  self.__params["Rb"]*2
@@ -212,41 +212,41 @@ class SegregationControl():
         tunnel_in = []
         tunnel_out = []
         preferencial = True
-        # print(i_data["number"],i_data["curve_index"],"try","inward" if inward else "","outward" if outward else "")
+        # print(i_data["number"],i_data["curve"],"try","inward" if inward else "","outward" if outward else "")
 
-        # print(0 if outward and inward else (-1 if inward else 1),i_data["curve_index"],[j_data["curve_index"] for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"])])
+        # print(0 if outward and inward else (-1 if inward else 1),i_data["curve"],[j_data["curve"] for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"])])
 
         for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"]):
-            if not j_data["state"] and abs(i_data["curve_index"] - j_data["curve_index"]) <= 2 :
-                # print(i_data["curve_index"],"cancel state",j_data["curve_index"])
+            if not j_data["state"] and abs(i_data["curve"] - j_data["curve"]) <= 2 :
+                # print(i_data["curve"],"cancel state",j_data["curve"])
                 return
 
             #A2: l3-l5
             if inward:
-                if j_data["state"] and i_data["curve_index"] - 1 == j_data["curve_index"]:
+                if j_data["state"] and i_data["curve"] - 1 == j_data["curve"]:
                     tunnel_in.append(j_data)
 
             #A2: l6-l8
             if outward:
-                if j_data["state"] and i_data["curve_index"] + 1 == j_data["curve_index"]:
+                if j_data["state"] and i_data["curve"] + 1 == j_data["curve"]:
                     tunnel_out.append(j_data)
 
             if j_data['state'] and j_data['will'] != movement_will['none'] and j_data['pose2D'][2] < i_data['pose2D'][2]:
                 # print("\t",i_data["number"],"not preferencial", j_data["number"] , "is first")
-                if j_data["curve_index"] == i_data["curve_index"]:
+                if j_data["curve"] == i_data["curve"]:
                     preferencial = False
-                    # print(i_data["curve_index"],"cancel pref same")
+                    # print(i_data["curve"],"cancel pref same")
                 else:
-                    if outward and j_data["curve_index"] > i_data["curve_index"] and abs(j_data["curve_index"] - i_data["curve_index"]) <=2:
+                    if outward and j_data["curve"] > i_data["curve"] and abs(j_data["curve"] - i_data["curve"]) <=2:
                         preferencial = False
-                        # print(i_data["curve_index"],"cancel pref out")
-                    if inward and j_data["curve_index"] < i_data["curve_index"] and abs(j_data["curve_index"] - i_data["curve_index"]) <=2:
+                        # print(i_data["curve"],"cancel pref out")
+                    if inward and j_data["curve"] < i_data["curve"] and abs(j_data["curve"] - i_data["curve"]) <=2:
                         preferencial = False
-                        # print(i_data["curve_index"],"cancel pref in")
+                        # print(i_data["curve"],"cancel pref in")
 
 
         if inward:
-            targ = i_data["curve_index"] - 1
+            targ = i_data["curve"] - 1
             ang_Sr,ang_Pi_dpi, ang_Pj_dpi = self.tunnel_angles(i_data,targ)
             for j_data in tunnel_in:
                 if j_data["group"] == i_data["group"]:
@@ -257,15 +257,15 @@ class SegregationControl():
                 ang_before = ang_Pi_dpi + ang_Sr_l
                 ang_after = ang_Pj_dpi + ang_Sr_l
                 ang_diff = math.remainder(targ_diff(i_data["pose2D"],j_data["pose2D"],targ),2*pi)
-                # print(ang_vec(i_data["pose2D"])*180/pi,i_data["curve_index"],ang_vec(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
+                # print(ang_vec(i_data["pose2D"])*180/pi,i_data["curve"],ang_vec(j_data["pose2D"])*180/pi,j_data["curve"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
-                # print(i_data["curve_index"],"inward",ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
+                # print(i_data["curve"],"inward",ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
                 if -ang_before < ang_diff < ang_after:
                     inward = False
-                    # print(i_data["curve_index"],"cancel in dist")
+                    # print(i_data["curve"],"cancel in dist")
                     break
         if outward:
-            targ = i_data["curve_index"] + 1
+            targ = i_data["curve"] + 1
             ang_Sr,ang_Pi_dpi, ang_Pj_dpi = self.tunnel_angles(i_data,targ)
             for j_data in tunnel_out:
                 if j_data["group"] == i_data["group"]:
@@ -276,23 +276,23 @@ class SegregationControl():
                 ang_before = ang_Pi_dpi + ang_Sr_l
                 ang_after = ang_Pj_dpi + ang_Sr_l
                 ang_diff = math.remainder(targ_diff(i_data["pose2D"],j_data["pose2D"],targ),2*pi)
-                # print(ang_vec(i_data["pose2D"])*180/pi,i_data["curve_index"],ang_vec(j_data["pose2D"])*180/pi,j_data["curve_index"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
+                # print(ang_vec(i_data["pose2D"])*180/pi,i_data["curve"],ang_vec(j_data["pose2D"])*180/pi,j_data["curve"],"\t",-ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi,"\t", ang_Pi_dpi*180/pi,ang_Sr_l*180/pi, ang_Pj_dpi*180/pi)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
-                # print(i_data["curve_index"],"outward", -ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
+                # print(i_data["curve"],"outward", -ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, -ang_before < ang_diff < ang_after)
                 if -ang_before < ang_diff < ang_after:
                     outward = False
-                    # print(i_data["curve_index"],"cancel out dist")
+                    # print(i_data["curve"],"cancel out dist")
                     break
 
         if outward:
-            # print("\t\t",i_data["number"],i_data["curve_index"],"outward")
+            # print("\t\t",i_data["number"],i_data["curve"],"outward")
 
             self.__will = movement_will["outward"]
             if preferencial:
                 self.evaluate_will_field()
         elif inward:
             self.__will = movement_will["inward"]
-            # print("\t\t",i_data["number"],i_data["curve_index"],"inward")
+            # print("\t\t",i_data["number"],i_data["curve"],"inward")
             if preferencial:
                 self.evaluate_will_field()
         # else:
