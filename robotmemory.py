@@ -2,7 +2,6 @@
 
 
 class MemoryItem():
-    
     def __init__(self):
         self.__group = 0
         self.__number = 0
@@ -14,33 +13,33 @@ class MemoryItem():
         self.__state = False
 
     def update(self, update_data):
-        if 'group' in update_data:
-            self.__group = update_data['group']
-        if 'number' in update_data:
-            self.__number = update_data['number']
-        if 'curve_index' in update_data:
-            self.__curve_index = update_data['curve_index']
-        if 'time_curve' in update_data:
-            self.__time_curve = update_data['time_curve']
-        if 'time' in update_data:
-            self.__time = update_data['time']
-        if 'pose2D' in update_data:
-            self.__pose2D = update_data['pose2D']
-        if 'will' in update_data:
-            self.__will = update_data['will']
-        if 'state' in update_data:
-            self.__state = update_data['state']
+        if "group" in update_data:
+            self.__group = update_data["group"]
+        if "number" in update_data:
+            self.__number = update_data["number"]
+        if "curve_index" in update_data:
+            self.__curve_index = update_data["curve_index"]
+        if "time_curve" in update_data:
+            self.__time_curve = update_data["time_curve"]
+        if "time" in update_data:
+            self.__time = update_data["time"]
+        if "pose2D" in update_data:
+            self.__pose2D = update_data["pose2D"]
+        if "will" in update_data:
+            self.__will = update_data["will"]
+        if "state" in update_data:
+            self.__state = update_data["state"]
 
     def get(self):
         return {
-            'group': self.__group,
-            'number': self.__number,
-            'curve_index': self.__curve_index,
-            'time_curve': self.__time_curve,
-            'time': self.__time,
-            'pose2D': self.__pose2D,
-            'will': self.__will,
-            'state': self.__state
+            "group": self.__group,
+            "number": self.__number,
+            "curve_index": self.__curve_index,
+            "time_curve": self.__time_curve,
+            "time": self.__time,
+            "pose2D": self.__pose2D,
+            "will": self.__will,
+            "state": self.__state
         }
 
 
@@ -71,16 +70,16 @@ class RobotMemory():
         return [self.get_memory_about_itself()] + self.get_memory_about_others()
 
     def check_and_update_memory_about_j(self, j_data):
-        if not j_data['curve_index']:
+        if not j_data["curve_index"]:
             return
         j_in_data = False
         i_data = self.__data[0].get()
         for memory_idx in range(1,len(self.__data)):
-            if self.__data[memory_idx].get()['number'] == j_data['number']:
+            if self.__data[memory_idx].get()["number"] == j_data["number"]:
                 j_in_data = True
-                if self.__data[memory_idx].get()['time'] < j_data['time']:
+                if self.__data[memory_idx].get()["time"] < j_data["time"]:
                     self.__data[memory_idx].update(j_data)
-        if not j_in_data and j_data['number'] != i_data['number']:
+        if not j_in_data and j_data["number"] != i_data["number"]:
             new_item = MemoryItem()
             new_item.update(j_data)
             self.__data.append(new_item)

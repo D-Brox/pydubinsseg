@@ -45,6 +45,6 @@ class DubinRobot():
 
 
 # Unit test
-if __name__ == '__main__':
+if __name__ == "__main__":
     # N/A
 	pass
