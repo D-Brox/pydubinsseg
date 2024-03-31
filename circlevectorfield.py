@@ -17,7 +17,8 @@ class CircleVectorField():
         p = np.array([pose2D[0], pose2D[1]])
         eta = self.__vr
 
-        p_c = p-self.__c_r[0]
+        c,r = self.__c_r
+        p_c,p_c_norm = vec_norm(p,c)
         s_star = ang_vec(p_c)
         r_star = self.__r(s_star)
 
@@ -26,17 +27,18 @@ class CircleVectorField():
             N, norm = vec_norm(D,0.1*D/dnorm)
             if norm == 0:
                 norm = 1e-3
-            T = self.__direction*ortogonal_vec(p_c)/np.dot(p_c,p_c)
+            T = self.__direction*ortogonal_vec(p_c)/p_c_norm
             G = - norm/np.sqrt(1 + norm**2)
             H = 1/np.sqrt(1+norm**2)
         else:
             N = D
-            T = self.__direction*ortogonal_vec(p_c)/np.dot(p_c,p_c)
+            T = self.__direction*ortogonal_vec(p_c)/p_c_norm
             G = 0
             H = 1
 
         F =  eta*(G*N+H*T)
-        return F,D,T,G,H
+        delta = p_c_norm/r
+        return F,D,T,G,H,delta
 
     def redefine(self, r, cx, cy, dir = None, kG = None, vr = None):
         self.__c_r = [np.array([cx,cy]),r]

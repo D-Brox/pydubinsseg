@@ -22,12 +22,12 @@ class DubinRobot():
     def set_constant_linear_velocity(self, v):
         self.__constant_linear_velocity = v
 
-    def calculate_lower_control(self, F):
+    def calculate_lower_control(self, F, delta):
         Kp = 0.8
         theta_ref = atan2(F[1], F[0])
         theta_error = asin(sin(theta_ref - self.__theta))
         w = Kp*theta_error
-        v = self.__constant_linear_velocity
+        v = self.__constant_linear_velocity * delta
         return (v,w)
 
     # def update_measurement(self,measurement):

@@ -217,8 +217,8 @@ class SegregationControl():
         # print(0 if outward and inward else (-1 if inward else 1),i_data["curve_index"],[j_data["curve_index"] for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"])])
 
         for j_data in self.__memory.get_memory_about_neighbours(self.__params["c"]):
-            if not j_data['state']:
-                # print(i_data['curve_index'],"cancel state",j_data["curve_index"])
+            if not j_data["state"] and abs(i_data["curve_index"] - j_data["curve_index"]) <= 2 :
+                # print(i_data["curve_index"],"cancel state",j_data["curve_index"])
                 return
 
             #A2: l3-l5
@@ -231,10 +231,19 @@ class SegregationControl():
                 if j_data["state"] and i_data["curve_index"] + 1 == j_data["curve_index"]:
                     tunnel_out.append(j_data)
 
-            if j_data['state'] and j_data['will'] != movement_will['none'] and ang_vec(j_data['pose2D']) <= ang_vec(i_data['pose2D']):
+            if j_data['state'] and j_data['will'] != movement_will['none'] and j_data['pose2D'][2] < i_data['pose2D'][2]:
                 # print("\t",i_data["number"],"not preferencial", j_data["number"] , "is first")
-                preferencial = False
-                # print(i_data['curve_index'],"cancel pref")
+                if j_data["curve_index"] == i_data["curve_index"]:
+                    preferencial = False
+                    # print(i_data["curve_index"],"cancel pref same")
+                else:
+                    if outward and j_data["curve_index"] > i_data["curve_index"] and abs(j_data["curve_index"] - i_data["curve_index"]) <=2:
+                        preferencial = False
+                        # print(i_data["curve_index"],"cancel pref out")
+                    if inward and j_data["curve_index"] < i_data["curve_index"] and abs(j_data["curve_index"] - i_data["curve_index"]) <=2:
+                        preferencial = False
+                        # print(i_data["curve_index"],"cancel pref in")
+
 
         if inward:
             targ = i_data["curve_index"] - 1
@@ -286,8 +295,8 @@ class SegregationControl():
             # print("\t\t",i_data["number"],i_data["curve_index"],"inward")
             if preferencial:
                 self.evaluate_will_field()
-        else:
-            self.__will = movement_will["none"]
+        # else:
+            # self.__will = movement_will["none"]
 
     def evaluate_will_field(self):
         self.set_state(state["transition"])
@@ -302,12 +311,12 @@ class SegregationControl():
         self.__vector_field.redefine(r, cx, cy, dir = dir)
 
     def calculate_input_signals(self):
-        [F,D,T,G,H] = self.__vector_field.compute_field(self.__robot.get_pose2D())
-        return self.__robot.calculate_lower_control(F)
+        [F,_,_,_,_,delta] = self.__vector_field.compute_field(self.__robot.get_pose2D())
+        return self.__robot.calculate_lower_control(F,delta)
 
-    def check_arrival(self, tol = 0.5):
+    def check_arrival(self, tol = 0.2):
         r = self.__desired_circle*self.__params["d"]
-        [F,D,T,G,H] = CircleVectorField(r,0,0).compute_field(self.__robot.get_pose2D())
+        [_,D,_,_,_,_] = CircleVectorField(r,0,0).compute_field(self.__robot.get_pose2D())
         if np.linalg.norm(D) <= tol:
             self.__set_lap(False)
             self.set_state(state["in circle"])
