@@ -46,16 +46,13 @@ class MemoryItem():
 class RobotMemory():
     def __init__(self):
         self.__data = [MemoryItem()]
+        self.__neighbors = []
 
     def reset(self):
         self.__data = [self.__data[0]]
 
-    def neighbors(self,c,d):
-        data_itself = self.__data[0]
-        pose = data_itself.get("pose2D")
-        dist = lambda d: (pose[0] - d[0])**2 + (pose[1] - d[0])**2 < c**2
-        time = lambda t: t + 120 * data_itself.get("curve") >= data_itself.get("time")
-        neighbors = [other for other in self.__data[1:] if dist(other.get("pose2D")) and time(other.get("time"))]
+    def neighbors(self):
+        neighbors = [other for other in self.__data[1:] if other.get("number") in self.__neighbors]
         self.__data = [self.__data[0]] + neighbors
 
     def update_memory_about_itself(self, i_data):
@@ -67,14 +64,15 @@ class RobotMemory():
     def get_memory_about_others(self):
         return [other.get() for other in self.__data[1:]]
 
-    def get_memory_about_neighbours(self,c):
+    def get_memory_about_neighbors(self):
         others = [other.get() for other in self.__data[1:]]
-        pose = self.__data[0].get("pose2D")
-        dist = lambda d: (pose[0] - d[0])**2 + (pose[1] - d[0])**2 < c**2
-        return [other for other in others if dist(other["pose2D"])]
+        return [other for other in others if other.get("number") in self.__neighbors]
 
     def get_memory(self):
         return [self.get_memory_about_itself()] + self.get_memory_about_others()
+
+    def set_neighbors(self,neighbors):
+        self.__neighbors = neighbors
 
     def check_and_update_memory_about_j(self, j_data):
         if not j_data["curve"]:
@@ -86,7 +84,7 @@ class RobotMemory():
                 j_in_data = True
                 if self.__data[memory_idx].get("time") < j_data["time"]:
                     self.__data[memory_idx].update(j_data)
-        if not j_in_data and j_data["number"] != i_data["number"]:
+        if (not j_in_data) and j_data["number"] != i_data["number"]:
             new_item = MemoryItem()
             new_item.update(j_data)
             self.__data.append(new_item)

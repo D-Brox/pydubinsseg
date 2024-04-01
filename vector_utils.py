@@ -5,6 +5,11 @@ from numpy.lib.scimath import sqrt
 def ang_vec(p):
     return np.arctan2(p[1],p[0])
 
+def ang_vec_diff(pa,pb):
+    a = ang_vec(pa)
+    b = ang_vec(pb)
+    return ang_diff(a,b)
+
 def targ_diff(pa,pb,targ):
     a = ang_vec(pa)
     b = ang_vec(pb)
