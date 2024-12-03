@@ -22,6 +22,7 @@ class DubinRobot():
     def set_constant_linear_velocity(self, v):
         self.__constant_linear_velocity = v
 
+    #TODO: use exact control
     def calculate_lower_control(self, F, delta):
         Kp = 0.8
         theta_ref = atan2(F[1], F[0])

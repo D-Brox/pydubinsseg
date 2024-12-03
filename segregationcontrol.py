@@ -22,7 +22,7 @@ class SegregationControl():
         self.__memory = RobotMemory()
 
         self.__time = 0
-        self.__start_time = 10
+        self.__start_time = 5
         self.__time_curve = 0
         self.__theta_curve = 0
         self.__desired_circle = 0
@@ -226,8 +226,6 @@ class SegregationControl():
         return ang_Sr,ang_goal,ang_Pi,ang_Pj
 
     def prevent_collision(self,inward,outward):
-        if self.__time < self.__start_time:
-            return
         i_data = self.__memory.get_memory_about_itself()
         tunnel_in = []
         tunnel_out = []
@@ -328,7 +326,7 @@ class SegregationControl():
 
     def calculate_input_signals(self):
         [F,_,_,_,_,delta] = self.__vector_field.compute_field(self.__robot.get_pose2D())
-        return self.__robot.calculate_lower_control(F,delta)
+        return self.__robot.calculate_lower_control(F,delta),F
 
     def check_arrival(self, tol = 0.2):
         r = self.__desired_circle*self.__params["d"]
