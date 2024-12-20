@@ -22,7 +22,7 @@ class SegregationControl():
         self.__memory = RobotMemory()
 
         self.__time = 0
-        self.__start_time = 5
+        self.__start_time = 8
         self.__time_curve = 0
         self.__theta_curve = 0
         self.__desired_circle = 0
@@ -38,6 +38,7 @@ class SegregationControl():
         # self.transition_dir = 0
 
     def calculate_initial_conditions(self):
+
         while self.__robot.get_pose2D() == [0.0,0.0,0.0]:
             pass
         p = self.__robot.get_pose2D()
@@ -46,6 +47,7 @@ class SegregationControl():
         self.__current_circle = max(round(sqrt(p[0]**2 + p[1]**2)/self.__params["d"]), 1)
         r = self.__current_circle*self.__params["d"]
         dir = ((-1)**(self.__current_circle))
+        print(f"circle {self.__current_circle}")
         self.__vector_field.redefine(r,0,0,dir=dir)
         self.update_memory_about_itself()
 
@@ -63,12 +65,19 @@ class SegregationControl():
 
     def set_time(self, time):
         self.__time = time
+    
+    def get_time(self):
+        return self.__time
 
-    def set_pose2D(self, pose2D):
-        self.__robot.set_pose2D(pose2D)
+    def set_pose2D(self, x,y):
+        theta = self.__vector_field.compute_theta(x,y)
+        self.__robot.set_pose2D([x,y,theta])
 
     def get_pose2D(self):
         return self.__robot.get_pose2D()
+    
+    def compute_next(self,x,y,v,dt):
+        return self.__vector_field.compute_next(x,y,v,dt)
 
     def set_params(self, params):
         self.__params = params
@@ -97,8 +106,8 @@ class SegregationControl():
 
     #HACK: think of a better way to do this
     def calculate_lap(self):
-        error_limit = 0.01
-        time_per_curve = 60 # wishful thinking, depending on the PC
+        error_limit = 0.25
+        time_per_curve = 10 # wishful thinking, depending on the PC
         theta_diff = abs(self.__theta_curve - self.__robot.get_pose2D()[2])
         condition_theta = theta_diff <= error_limit or theta_diff >= 2*pi-error_limit
         condition_time = self.__time - self.__time_curve > time_per_curve*self.__current_circle
@@ -310,6 +319,7 @@ class SegregationControl():
             # print("\t\t",i_data["number"],i_data["curve"],"inward")
             if preferencial:
                 self.evaluate_transition_field()
+        print(self.__will)
         self.update_memory_about_itself()
 
     def evaluate_transition_field(self):
@@ -322,6 +332,7 @@ class SegregationControl():
         cy = p[1]*(sqrt(p[0]**2 + p[1]**2)+sig*r)/sqrt(p[0]**2 + p[1]**2)
         self.__desired_circle = max(self.__current_circle+sig,1)
         dir = ((-1)**(self.__desired_circle)) if sig == 1 else None
+        print("transition")
         self.__vector_field.redefine(r, cx, cy, dir = dir)
 
     def calculate_input_signals(self):
@@ -338,5 +349,6 @@ class SegregationControl():
             self.__memory.neighbors()
             self.__current_circle = self.__desired_circle
             dir = ((-1)**(self.__current_circle))
+            print(f"circle {self.__current_circle}")
             self.__vector_field.redefine(r,0,0,dir=dir)
         self.update_memory_about_itself()
