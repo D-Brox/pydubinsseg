@@ -9,7 +9,6 @@ class DubinRobot():
         self.__y = 0
         self.__theta = 0
         self.__constant_linear_velocity = v
-        # self.__range_sensor = RangeSensor()
 
     def set_pose2D(self, pose2D):
         self.__x = float(pose2D[0])

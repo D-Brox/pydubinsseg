@@ -30,13 +30,6 @@ class SegregationControl():
         self.__vector_field = CircleVectorField(1,0,0)
         self.update_memory_about_itself()
 
-        # self.mov_radius = 1
-        # self.curve_vector_field = VectorField()
-        # self.transition_vector_field = VectorField()
-        # self.transition_x = 0
-        # self.transition_y = 0
-        # self.transition_dir = 0
-
     def calculate_initial_conditions(self):
         while self.__robot.get_pose2D() == [0.0,0.0,0.0]:
             pass
@@ -51,9 +44,6 @@ class SegregationControl():
 
     def get_state(self):
         return self.__state
-
-    def get_group(self):
-        return self.__group
 
     def set_neighbors(self,neighbors):
         self.__memory.set_neighbors(neighbors)
@@ -93,112 +83,6 @@ class SegregationControl():
 
     def recieve_memory(self, other_memory):
         self.__memory.compare_and_update(other_memory)
-
-
-    #HACK: think of a better way to do this
-    def calculate_lap(self):
-        error_limit = 0.01
-        time_per_curve = 60 # wishful thinking, depending on the PC
-        theta_diff = abs(self.__theta_curve - self.__robot.get_pose2D()[2])
-        condition_theta = theta_diff <= error_limit or theta_diff >= 2*pi-error_limit
-        condition_time = self.__time - self.__time_curve > time_per_curve*self.__current_circle
-        if condition_theta and condition_time:
-            self.__set_lap(True)
-
-    def __set_lap(self, lap):
-        self.__lap = lap
-        self.__time_curve = self.__time
-        self.__theta_curve = self.__robot.get_pose2D()[2]
-        self.update_memory_about_itself()
-
-    def calculate_will(self):
-        i_data = self.__memory.get_memory_about_itself()
-
-        make_room = False
-        inward = False
-        outward = False
-
-        neighbors_same_circle = []
-        k_data_same_group_inside = []
-        k_other_group_same_circle = []
-
-        for j_data in self.__memory.get_memory_about_neighbors():
-            # A1: l13-l15
-            if j_data["group"] != i_data["group"] and j_data["curve"] == i_data["curve"] - 1:
-                self.__set_lap(False)
-
-            if j_data["curve"] == i_data["curve"]:
-                neighbors_same_circle.append(j_data)
-
-        for k_data in self.__memory.get_memory_about_others():
-            # if not k_data["state"]:
-                # continue
-            if k_data["group"] != i_data["group"]:
-                if k_data["curve"] == i_data["curve"]:
-                    k_other_group_same_circle.append(k_data)
-            elif k_data["curve"] < i_data["curve"]:
-                    k_data_same_group_inside.append(k_data)
-            if k_data["group"] != i_data["group"] and k_data["will"] == movement_will["outward"] and k_data["curve"] == (i_data["curve"] - 1):
-                # print(self.__number,"at",self.__current_circle,"make room for",k_data["number"])
-                make_room = True
-
-        k_same_group_alone_inside = False
-        if k_data_same_group_inside:
-            k_same_group_alone_inside = True
-            for k_data in k_data_same_group_inside:
-                for l_data in self.__memory.get_memory_about_others():
-                    if not l_data["state"]:
-                        continue
-                    if k_data["curve"] != l_data["curve"]:
-                        continue
-                    if k_data["group"] == l_data["group"]:
-                        continue
-                    break
-                else: # only executed if the inner loop did NOT break
-                    continue
-                k_same_group_alone_inside = False
-                break
-
-        #A1: l22-l23
-        if make_room:
-            close = []
-            ang_Sr = self.security_distance(i_data["curve"])/(i_data["curve"] * self.__params["d"])
-            for j_data in neighbors_same_circle:
-                if ang_vec_diff(i_data["pose2D"],j_data["pose2D"]) < 1.5 * ang_Sr:
-                    close.append(j_data)
-            if len(close) >= 2:
-                outward = True
-
-        #A1: l17-l16
-        if k_same_group_alone_inside:
-            inward = True
-            # print(self.__number,"at",self.__current_circle,"same inward alone")
-        #A1: l19-l21
-        if k_other_group_same_circle and not inward:
-            outward  = False
-            for k_data in k_other_group_same_circle:
-                # print(i_data["curve"],i_data["time_curve"],k_data["time_curve"])
-                if k_data["state"] and (i_data["time_curve"] > k_data["time_curve"] or (i_data["time_curve"] == k_data["time_curve"] and (i_data["pose2D"][2] > k_data["pose2D"][2]))):
-                    outward |= True
-                    # print(self.__number,"at",self.__current_circle,"other same", "lose to", k_data["number"],outward)
-                    break
-                # else:
-                    # print(self.__number,"at",self.__current_circle,"other same", "win")
-
-        #A1: l22-l23
-        if self.__lap and i_data["curve"] > 1:
-            inward = True
-            # print(self.__number,"at",self.__current_circle,"lap and space")
-
-        if outward:
-            self.__will = movement_will["outward"]
-        elif inward:
-            self.__will = movement_will["inward"]
-        else:
-            self.__will = movement_will["none"]
-
-        self.update_memory_about_itself()
-        return inward,outward
 
     def security_distance(self,curve):
         d = (curve-0.5)*self.__params["d"]
