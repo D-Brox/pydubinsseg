@@ -2,6 +2,9 @@ import numpy as np
 from numpy import pi
 from numpy.lib.scimath import sqrt
 
+def dot_vec(pa,pb):
+    return pa[0]*pb[0]+pa[1]*pb[1]
+
 def ang_vec(p):
     return np.arctan2(p[1],p[0])
 

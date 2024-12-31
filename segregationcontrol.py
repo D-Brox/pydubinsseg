@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 import numpy as np
-from numpy import pi
 from numpy.lib.scimath import sqrt
 
 from pydubinsseg.dubinrobot import DubinRobot
 from pydubinsseg.robotmemory import RobotMemory
 from pydubinsseg.circlevectorfield import CircleVectorField
-from pydubinsseg.vector_utils import ang_vec, ang_vec_diff, targ_diff
+from pydubinsseg.vector_utils import ang_vec, dot_vec, targ_diff
 from pydubinsseg import movement_will, state
 
 class SegregationControl():
@@ -20,7 +19,7 @@ class SegregationControl():
         self.__lap = False
         self.__robot = DubinRobot(1.0)
         self.__memory = RobotMemory()
-
+        self.__segregated = False
         self.__time = 0
         self.__start_time = 10
         self.__time_curve = 0
@@ -53,6 +52,9 @@ class SegregationControl():
 
     def set_time(self, time):
         self.__time = time
+
+    def set_segregated(self, segregated):
+        self.__segregated = segregated
 
     def set_pose2D(self, pose2D):
         self.__robot.set_pose2D(pose2D)
@@ -89,7 +91,7 @@ class SegregationControl():
         r1 = curve*self.__params["d"] -  self.__params["Rb"]*2
         r2 = self.__params["d"]/2
         l = (r2**2 - r1**2 + d**2)/(2*d)
-        return (pi-np.arccos(l/r2))*r2
+        return (np.pi-np.arccos(l/r2))*r2
 
     def tunnel_angles(self, curr, targ):
         d = (targ+curr)/2*self.__params["d"]
@@ -98,7 +100,7 @@ class SegregationControl():
         l = (r1**2 - r2**2 + d**2)/(2*d)
 
         r = self.__params["d"]/2
-        goal = pi*r
+        goal = np.pi*r
         ang_goal = goal/r1
 
         Sr = self.security_distance(targ)
@@ -106,7 +108,7 @@ class SegregationControl():
 
         ang_Pi = 2*np.arcsin(self.__params["Rb"]/r2)*r/r1
         ang_Pj = np.arccos(l/r1)
-        # print(ang_Pi*180/pi,ang_Pj*180/pi,ang_dpi*180/pi)
+        # print(ang_Pi*180/np.pi,ang_Pj*180/np.pi,ang_dpi*180/np.pi)
         return ang_Sr,ang_goal,ang_Pi,ang_Pj
 
     def prevent_collision(self,inward,outward):
@@ -116,6 +118,7 @@ class SegregationControl():
         tunnel_in = []
         tunnel_out = []
         preferencial = True
+        
         for j_data in self.__memory.get_memory_about_neighbors():
             if abs(i_data["curve"] - j_data["curve"]) > 2:
                 # print("\t\t",i_data["curve"],j_data["curve"])
@@ -134,35 +137,31 @@ class SegregationControl():
             if outward:
                 if i_data["curve"] + 1 == j_data["curve"]:
                     tunnel_out.append(j_data)
+                elif j_data["curve"] == i_data["curve"]:
+                    if j_data['will'] == movement_will['outward']:
+                        if ang_vec(j_data['pose2D']) < ang_vec(i_data['pose2D']):
+                            preferencial = False
 
-            if j_data['will'] != movement_will['none'] and ang_vec(j_data['pose2D']) < ang_vec(i_data['pose2D']):
-                # print("\t",i_data["number"],"not preferencial", j_data["number"] , "is first")
-                if j_data["curve"] == i_data["curve"]:
-                    preferencial = False
-                    # print(i_data["curve"],"cancel pref same")
-                else:
-                    if outward and j_data["curve"] > i_data["curve"]:
-                        preferencial = False
-                        # print(i_data["curve"],"cancel pref out")
-                    if inward and j_data["curve"] < i_data["curve"]:
-                        preferencial = False
-                        # print(i_data["curve"],"cancel pref in")
+            #A2: l9-l20
+            if inward and j_data['will'] == movement_will['outward'] and j_data["curve"] < i_data["curve"]:
+                preferencial = False
 
+        #TODO: fix ocupancy
         if inward:
             targ = i_data["curve"] - 1
             ang_Sr,ang_goal,ang_Pi, ang_Pj = self.tunnel_angles(i_data["curve"],targ)
             for j_data in tunnel_in:
-                if j_data["group"] == i_data["group"] and targ != 1:
-                    ang_Sr_l=2*ang_Sr
-                else:
-                    ang_Sr_l = ang_Sr
+                # if j_data["group"] == i_data["group"] and not self.__segregated:
+                    # ang_Sr_l=2*ang_Sr
+                # else:
+                ang_Sr_l = ang_Sr
 
                 ang_before = ang_goal - ang_Pi - ang_Sr_l
                 ang_after = ang_goal + ang_Pj + ang_Sr_l
                 ang_diff = targ_diff(i_data["pose2D"],j_data["pose2D"],targ)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
-                # print(i_data["curve"],"inward",ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, ang_before < ang_diff < ang_after)
-                if ang_before < ang_diff < ang_after:
+                # print(i_data["curve"],"inward",ang_before*180/np.pi,ang_diff*180/np.pi,ang_after*180/np.pi, ang_before < ang_diff < ang_after)
+                if ang_before < ang_diff < ang_after and dot_vec(i_data["pose2D"],j_data["pose2D"])>=0:
                     inward = False
                     # print(i_data["curve"],"cancel in dist")
                     break
@@ -171,17 +170,18 @@ class SegregationControl():
             targ = i_data["curve"] + 1
             ang_Sr,ang_goal,ang_Pi, ang_Pj = self.tunnel_angles(i_data["curve"],targ)
             for j_data in tunnel_out:
-                if j_data["group"] == i_data["group"]:
-                    ang_Sr_l=2*ang_Sr
-                else:
-                    ang_Sr_l = ang_Sr
+                
+                # if j_data["group"] == i_data["group"]:
+                    # ang_Sr_l=2*ang_Sr
+                # else:
+                ang_Sr_l = ang_Sr
 
                 ang_before = ang_goal - ang_Pi - ang_Sr_l
                 ang_after = ang_goal + ang_Pj + ang_Sr_l
                 ang_diff = targ_diff(i_data["pose2D"],j_data["pose2D"],targ)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
-                # print(i_data["curve"],"outward", ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, ang_before < ang_diff < ang_after)
-                if ang_before < ang_diff < ang_after:
+                # print(i_data["curve"],"outward", ang_before*180/np.pi,ang_diff*180/np.pi,ang_after*180/np.pi, ang_before < ang_diff < ang_after)
+                if ang_before < ang_diff < ang_after and dot_vec(i_data["pose2D"],j_data["pose2D"])>=0:
                     outward = False
                     # print(i_data["curve"],"cancel out dist")
                     break
@@ -200,7 +200,6 @@ class SegregationControl():
 
     def evaluate_transition_field(self):
         self.set_state(state["transition"])
-        self.__set_lap(False)
         p = self.__robot.get_pose2D()
         r = self.__params["d"]/2
         sig = 1 if self.__will == movement_will["outward"] else -1
@@ -218,7 +217,6 @@ class SegregationControl():
         r = self.__desired_circle*self.__params["d"]
         [_,D,_,_,_,_] = CircleVectorField(r,0,0).compute_field(self.__robot.get_pose2D())
         if np.linalg.norm(D) <= tol:
-            self.__set_lap(False)
             self.set_state(state["in circle"])
             self.__will = movement_will["none"]
             self.__memory.neighbors()
