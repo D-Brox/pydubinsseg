@@ -37,7 +37,7 @@ class CircleVectorField():
             H = 1
 
         F =  eta*(G*N+H*T)
-        delta = p_c_norm/r
+        delta = 1 # np.sqrt(p_c_norm/r)
         return F,D,T,G,H,delta
 
     def redefine(self, r, cx, cy, dir = None, kG = None, vr = None):

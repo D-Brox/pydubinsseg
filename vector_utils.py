@@ -2,6 +2,9 @@ import numpy as np
 from numpy import pi
 from numpy.lib.scimath import sqrt
 
+def dot_vec(pa,pb):
+    return pa[0]*pb[0]+pa[1]*pb[1]
+
 def ang_vec(p):
     return np.arctan2(p[1],p[0])
 
@@ -29,3 +32,6 @@ def vec_norm(p1,p2):
 
 def ortogonal_vec(v):
     return np.array([-v[1],v[0]])
+
+def dist(p1,p2):
+    return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)

@@ -6,7 +6,7 @@ from numpy.lib.scimath import sqrt
 from pydubinsseg.dubinrobot import DubinRobot
 from pydubinsseg.robotmemory import RobotMemory
 from pydubinsseg.circlevectorfield import CircleVectorField
-from pydubinsseg.vector_utils import ang_vec, ang_vec_diff, targ_diff
+from pydubinsseg.vector_utils import dot_vec, ang_vec, ang_vec_diff, targ_diff
 from pydubinsseg import movement_will, state
 
 class SegregationControl():
@@ -138,9 +138,10 @@ class SegregationControl():
                     k_other_group_same_circle.append(k_data)
             elif k_data["curve"] < i_data["curve"]:
                     k_data_same_group_inside.append(k_data)
-            if k_data["group"] != i_data["group"] and k_data["will"] == movement_will["outward"] and k_data["curve"] == (i_data["curve"] - 1):
+            if k_data["group"] != i_data["group"] and k_data["will"] == movement_will["outward"] and k_data["curve"] == (i_data["curve"] - 1) and not k_data["state"]:
                 # print(self.__number,"at",self.__current_circle,"make room for",k_data["number"])
-                make_room = True
+                if len([data for data in self.__memory.get_memory_about_neighbors() if data["curve"] == i_data["curve"] and data["state"]])>2:
+                    make_room = True
 
         k_same_group_alone_inside = False
         if k_data_same_group_inside:
@@ -178,8 +179,8 @@ class SegregationControl():
             outward  = False
             for k_data in k_other_group_same_circle:
                 # print(i_data["curve"],i_data["time_curve"],k_data["time_curve"])
-                if k_data["state"] and (i_data["time_curve"] > k_data["time_curve"] or (i_data["time_curve"] == k_data["time_curve"] and (i_data["pose2D"][2] > k_data["pose2D"][2]))):
-                    outward |= True
+                if k_data["state"] and ((i_data["curve"] == k_data["curve"] and i_data["time_curve"] > k_data["time_curve"]) or (i_data["time_curve"] == k_data["time_curve"] and (i_data["pose2D"][2] > k_data["pose2D"][2]))):
+                    outward = True
                     # print(self.__number,"at",self.__current_circle,"other same", "lose to", k_data["number"],outward)
                     break
                 # else:
@@ -277,8 +278,8 @@ class SegregationControl():
                 ang_after = ang_goal + ang_Pj + ang_Sr_l
                 ang_diff = targ_diff(i_data["pose2D"],j_data["pose2D"],targ)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
-                # print(i_data["curve"],"inward",ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, ang_before < ang_diff < ang_after)
-                if ang_before < ang_diff < ang_after:
+                # if ang_before < ang_diff < ang_after:
+                if ang_before < ang_diff < ang_after and (dot_vec(i_data["pose2D"],j_data["pose2D"])>=0 or targ == 1):
                     inward = False
                     # print(i_data["curve"],"cancel in dist")
                     break
@@ -297,7 +298,8 @@ class SegregationControl():
                 ang_diff = targ_diff(i_data["pose2D"],j_data["pose2D"],targ)
                 # print(i_data["pose2D"][:2],j_data["pose2D"][:2])
                 # print(i_data["curve"],"outward", ang_before*180/pi,ang_diff*180/pi,ang_after*180/pi, ang_before < ang_diff < ang_after)
-                if ang_before < ang_diff < ang_after:
+                # if ang_before < ang_diff < ang_after:
+                if ang_before < ang_diff < ang_after and dot_vec(i_data["pose2D"],j_data["pose2D"])>=0:
                     outward = False
                     # print(i_data["curve"],"cancel out dist")
                     break

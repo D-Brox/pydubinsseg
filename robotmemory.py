@@ -53,7 +53,7 @@ class RobotMemory():
 
     def neighbors(self):
         neighbors = [other for other in self.__data[1:] if other.get("number") in self.__neighbors]
-        self.__data = [self.__data[0]] + neighbors
+        self.__data = [self.__data[0]] #+ neighbors
 
     def update_memory_about_itself(self, i_data):
         self.__data[0].update(i_data)
